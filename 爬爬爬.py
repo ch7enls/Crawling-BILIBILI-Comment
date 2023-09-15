@@ -6,7 +6,7 @@ import emoji
 import tkinter as tk
 from tkinter import messagebox
 
-global data, oid
+global data, oid, page
 data = []
 page = 1
 oid = ""
@@ -26,6 +26,7 @@ def get_oid():  # 输入视频链接拿到oid
     # 去掉&oid=
     oid = oid[0][5:]
 
+    # page = 1
     get_data(oid, page)
     print(oid)
     return oid
@@ -33,10 +34,12 @@ def get_oid():  # 输入视频链接拿到oid
 
 def get_data(oid, page):  # 获取评论区，翻页
     print("oid", oid)
+    # page = page
     while True:
         success = get_comments(oid, page)  # 调用方法
+        # print(page, success)
         page += 1
-        if get_comments(oid, page) == 0:
+        if success == 0:
             break
 
 
@@ -57,17 +60,23 @@ def get_comments(oid, page):
 
     # 发起HTTP请求获取网页内容,请求方式可以是get、post等
     response = requests.get(url, headers=headers, params=params)
-    print(response.text)  # 打印源数据
+    # print(response.text)  # 打印源数据
     json_data = json.loads(response.text)
+    # print(json_data)
 
-    if json_data['data']['replies'] is not None:
+    if json_data['data']['replies']:
+        # print(json_data['data']['replies'])
         for item in json_data['data']['replies']:
+            uid = item['mid']
             uname = item['member']['uname']
             sex = item['member']['sex']
+            sign = item['member']['sign']
+            level = item['member']['level_info']['current_level']
             content = item['content']['message']
+            like = item['like']
             processed_content = emoji.demojize(content)
             # print(uname, sex, processed_content)
-            data.append({'昵称': uname, '性别': sex, '评论内容': processed_content})
+            data.append({'uid': uid, '昵称': uname, '性别': sex,  '个人签名': sign, '等级': level, '点赞': like, '评论内容': processed_content})
 
         print('第{}页爬取完成'.format(page))
 
@@ -81,8 +90,8 @@ def get_comments(oid, page):
 def save_to_csv(data):  # 保存excel文件
     filename = '评论区.csv'
 
-    with open(filename, 'a', newline='', encoding='utf-8') as f:
-        fieldnames = ['昵称', '性别', '评论内容']
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        fieldnames = ['uid', '昵称', '性别', '个人签名', '等级', '点赞', '评论内容']
         writer = csv.DictWriter(f, fieldnames=fieldnames)
 
         writer.writeheader()
